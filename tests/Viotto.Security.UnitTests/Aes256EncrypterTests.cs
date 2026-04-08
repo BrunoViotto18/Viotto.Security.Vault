@@ -31,4 +31,21 @@ public class AES256EncrypterTests
         var base64 = _base64Encoder.ToBase64(output);
         base64.Should().Be(expected);
     }
+
+    [Theory]
+    [InlineData("rj4j0oXoIouySaSTartAsQ==", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "0123456789ABCDEF")]
+    [InlineData("qcbRXhI2Vpjjvc5KdwQ13Q==", "abcdefghijklmnopqrstuvwxyz012345", "0123456789ABCDEF")]
+    public void Decrypt_ShouldDecryptData(string encryptedData, string key, string expected)
+    {
+        // Arrange
+        var inputBytes = _base64Encoder.FromBase64(encryptedData);
+        var keyBytes = Encoding.UTF8.GetBytes(key);
+
+        // Act
+        var output = _sut.Decrypt(inputBytes, keyBytes);
+
+        // Assert
+        var base64 = Encoding.UTF8.GetString(output);
+        base64.Should().Be(expected);
+    }
 }
