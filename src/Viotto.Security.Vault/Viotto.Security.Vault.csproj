@@ -11,4 +11,15 @@
     <ProjectReference Include="../Viotto.Security/Viotto.Security.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <NistAssets Include="../../assets/nist/**/*.rsp" />
+  </ItemGroup>
+
+  <Target Name="CopyNistAssets" AfterTargets="Build">
+    <Copy
+      SourceFiles="@(NistAssets)"
+      DestinationFiles="@(NistAssets->'$(OutDir)/nist/%(RecursiveDir)%(Filename)%(Extension)')"
+    />
+  </Target>
+
 </Project>

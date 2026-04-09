@@ -87,7 +87,12 @@ StyleCopReport.xml
 *.ipdb
 *.pgc
 *.pgd
-*.rsp
+*128.rsp
+*192.rsp
+OFB*.rsp
+ECB*.rsp
+CFB*.rsp
+
 # but not Directory.Build.rsp, as it configures directory-level build defaults
 !Directory.Build.rsp
 *.sbr
