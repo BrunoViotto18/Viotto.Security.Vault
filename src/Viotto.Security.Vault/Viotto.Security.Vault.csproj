@@ -12,6 +12,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="../../assets/sample/mensagem.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <NistAssets Include="../../assets/nist/**/*.rsp" />
   </ItemGroup>
 
