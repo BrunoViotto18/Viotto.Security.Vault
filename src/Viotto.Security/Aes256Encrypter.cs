@@ -1,3 +1,6 @@
+using System.Buffers.Binary;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Viotto.Security;
@@ -140,30 +143,49 @@ public sealed class Aes256Encrypter
         Xor(block, firstKey);
     }
 
-    private static void ExpandKeys(Span<byte> expandedKeysBuffer, ReadOnlySpan<byte> key)
+    internal static void ExpandKeys(Span<byte> expandedKeysBuffer, ReadOnlySpan<byte> key)
     {
         key.CopyTo(expandedKeysBuffer);
+        var expandedKeys = MemoryMarshal.Cast<byte, int>(expandedKeysBuffer);
 
         for (int wordIndex = 8; wordIndex < 60; wordIndex++)
         {
-            var previousWord = expandedKeysBuffer.Slice((wordIndex - 1) * 4, 4);
-            var currentWord = expandedKeysBuffer.Slice(wordIndex * 4, 4);
-            previousWord.CopyTo(currentWord);
+            var word = ReadWord(expandedKeys, wordIndex - 1);
 
             if (wordIndex % 8 == 0)
             {
-                RotateLeft(currentWord);
-                SubBytes(currentWord);
-                currentWord[0] ^= RCon[wordIndex / 8];
+                word = (int)BitOperations.RotateLeft((uint)word, 8);
+                word = SubBytes(word);
+                word = (word & 0x00FFFFFF) | (((word >> 24) ^ RCon[wordIndex / 8]) << 24);
             }
             else if (wordIndex % 8 == 4)
             {
-                SubBytes(currentWord);
+                word = SubBytes(word);
             }
 
-            var someWord = expandedKeysBuffer.Slice((wordIndex - 8) * 4, 4);
-            Xor(currentWord, someWord);
+            word ^= ReadWord(expandedKeys, wordIndex - 8);
+
+            WriteWord(expandedKeys, wordIndex, word);
         }
+    }
+
+    private static int ReadWord(ReadOnlySpan<int> expandedKeys, int index)
+    {
+        var word = expandedKeys[index];
+        if (BitConverter.IsLittleEndian)
+        {
+            word = BinaryPrimitives.ReverseEndianness(word);
+        }
+        return word;
+    }
+
+    private static void WriteWord(Span<int> expandedKeys, int index, int word)
+    {
+        if (BitConverter.IsLittleEndian)
+        {
+            word = BinaryPrimitives.ReverseEndianness(word);
+        }
+        expandedKeys[index] = word;
     }
 
     private static void Xor(Span<byte> data, ReadOnlySpan<byte> value)
@@ -211,6 +233,22 @@ public sealed class Aes256Encrypter
             var value = data[i];
             data[i] = SBox[value];
         }
+    }
+
+    private static unsafe T SubBytes<T>(T data)
+        where T : unmanaged, IBinaryInteger<T>
+    {
+        T result = T.Zero;
+        var bits = sizeof(T) * 8;
+
+        for (int shift = bits - 8; shift >= 0; shift -= 8)
+        {
+            result <<= 8;
+            var index = byte.CreateTruncating(data >> shift);
+            result |= T.CreateTruncating(SBox[index]);
+        }
+
+        return result;
     }
 
     private static void UnsubBytes(Span<byte> data)
